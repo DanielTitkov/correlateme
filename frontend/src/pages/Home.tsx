@@ -5,17 +5,21 @@ import { H1, H2, H4 } from '../components/typography/typography'
 import supabase from '../config/supabaseClient'
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
 import { Terminal } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card'
 import { CalendarDateRangePicker } from '../components/ui/data-range-picker'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Icons } from '../components/ui/icon'
-import { Bar, BarChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { formatDateToDDMMYYYY } from '../lib/utils'
+import MetricCard from '../components/ui/metric-card'
+import { Metric, Observation } from '../types/supabase'
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet'
+import { Label } from '../components/ui/label'
+import { Input } from '../components/ui/input'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../components/ui/select'
+
 
 
 function Home() {
   const [fetchError, setFetchError] = useState("")
-  const [metricsData, setMetricsData] = useState(null)
+  const [metricsData, setMetricsData] = useState<(Metric & { observations: Observation[] })[] | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,7 +51,55 @@ function Home() {
           <H2>Dashboard</H2>
           <div className="flex items-center space-x-2">
             <CalendarDateRangePicker />
-            <Button>Download</Button>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button>New Metric</Button>
+              </SheetTrigger>
+              <SheetContent>
+                <SheetHeader>
+                  <SheetTitle>Add new metric</SheetTitle>
+                  <SheetDescription>
+                    Create new metric, click "Save" when you are done.
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="name" className="text-right">
+                      Name
+                    </Label>
+                    <Input id="name" className="col-span-3" />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="name" className="text-right">
+                      Description
+                    </Label>
+                    <Input id="name" className="col-span-3" />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="username" className="text-right">
+                      Metric type
+                    </Label>
+                    <Select>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select metric type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Metric types</SelectLabel>
+                          <SelectItem value="numeric">Numeric</SelectItem>
+                          <SelectItem value="boolean">Boolean</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <SheetFooter>
+                  <SheetClose asChild>
+                    <Button type="submit">Save</Button>
+                  </SheetClose>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
         <Tabs defaultValue="overview" className="space-y-4">
@@ -77,110 +129,9 @@ function Home() {
 
               {metricsData ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {metricsData.map(metric => {
-
-                    const totalValue = metric.observations.reduce((acc, observation) => acc + observation.value, 0);
-                    const average = totalValue / metric.observations.length;
-
-                    const transformedData = metric.observations.map(observation => ({
-                      timestamp: formatDateToDDMMYYYY(new Date(observation.timestamp)),
-                      value: observation.value,
-                      average: average,
-                    }));
-
-                    console.log(transformedData)
-
-                    return (
-                      <Card key={metric.id}>
-                        <CardHeader>
-                          <CardTitle>{metric.name}</CardTitle>
-                          <CardDescription>{metric.id}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="my-3 h-[200px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <LineChart
-                                data={transformedData}
-                                margin={{
-                                  top: 5,
-                                  right: 10,
-                                  left: 10,
-                                  bottom: 0,
-                                }}
-                              >
-                                <Line
-                                  type="monotone"
-                                  strokeWidth={2}
-                                  dataKey="average"
-                                  activeDot={{
-                                    r: 6,
-                                    style: { fill: "#343cdc", opacity: 0.25 },
-                                  }}
-                                  style={
-                                    {
-                                      stroke: "#343cdc",
-                                      opacity: 0.25,
-                                    } as React.CSSProperties
-                                  }
-                                />
-                                <Line
-                                  type="monotone"
-                                  dataKey="value"
-                                  strokeWidth={2}
-                                  activeDot={{
-                                    r: 8,
-                                    style: { fill: "#343cdc" },
-                                  }}
-                                  style={
-                                    {
-                                      stroke: "#343cdc",
-                                    } as React.CSSProperties
-                                  }
-                                />
-                                <Tooltip
-                                  content={({ active, payload }) => {
-                                    if (active && payload && payload.length) {
-                                      return (
-                                        <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                          <H4>
-                                            {payload[0].payload.timestamp}
-                                          </H4>
-                                          <div className="grid grid-cols-2 gap-2">
-                                            <div className="flex flex-col">
-                                              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                                Average
-                                              </span>
-                                              <span className="font-bold text-muted-foreground">
-                                                {payload[0].value}
-                                              </span>
-                                            </div>
-                                            <div className="flex flex-col">
-                                              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                                Current
-                                              </span>
-                                              <span className="font-bold">
-                                                {payload[1].value}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      )
-                                    }
-
-                                    return null
-                                  }}
-                                />
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </CardContent>
-                        <CardFooter className="flex justify-between">
-                          <Button variant="outline">Edit</Button>
-                          <Button>Correlate</Button>
-                        </CardFooter>
-                      </Card>
-                    )
-                  })}
+                  {metricsData.map(metric => (
+                    <MetricCard key={metric.id} metric={metric} />
+                  ))}
                 </div>
               ) : (
                 <div className="flex items-center">

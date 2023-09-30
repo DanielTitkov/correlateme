@@ -8,7 +8,7 @@ import { DateRange } from "react-day-picker"
 import { cn } from "../../lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "./popover"
 import { Button } from "./button"
-import { Calendar } from "lucide-react"
+import { Calendar } from "./calendar"
 
 
 

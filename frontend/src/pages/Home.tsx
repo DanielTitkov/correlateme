@@ -4,7 +4,7 @@ import { Button } from "../components/ui/button"
 import { H1, H2, H4 } from '../components/typography/typography'
 import supabase from '../config/supabaseClient'
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
-import { Terminal } from 'lucide-react'
+import { AlertCircle, Terminal } from 'lucide-react'
 import { CalendarDateRangePicker } from '../components/ui/data-range-picker'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Icons } from '../components/ui/icon'
@@ -18,35 +18,89 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 
 
 function Home() {
+  // temporary // FIXME
+  const userId = "7d37704a-489d-447f-a623-4433e22bfb55"
+
+  // metrics
   const [fetchError, setFetchError] = useState("")
   const [metricsData, setMetricsData] = useState<(Metric & { observations: Observation[] })[] | null>(null)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data, error } = await supabase
-        .from("metrics")
-        .select("*, observations(*)")
+  // create new metric form 
+  const [newMetricName, setNewMetricName] = useState("")
+  const [newMetricDesc, setNewMetricDesc] = useState("")
+  const [newMetricKind, setNewMetricKind] = useState("")
+  const [newMetricError, setNewMetricError] = useState("")
 
-      if (error) {
-        setFetchError('Failed to fetch metrics data')
-        setMetricsData(null)
-        console.log(error)
-      }
+  const fetchData = async () => {
+    const { data, error } = await supabase
+      .from("metrics")
+      .select("*, observations(*)")
 
-      if (data) {
-        setMetricsData(data)
-        setFetchError("")
-      }
-
-      console.log(data, error)
+    if (error) {
+      setFetchError('Failed to fetch metrics data')
+      setMetricsData(null)
+      console.log(error)
     }
 
+    if (data) {
+      setMetricsData(data)
+      setFetchError("")
+    }
+
+    console.log(data, error) // FIXME
+  }
+
+
+  const handleMetricSubmit = async () => {
+
+    if (!newMetricName || !newMetricKind) {
+      setNewMetricError("Please fill required field")
+      return
+    }
+
+    console.log(newMetricName, newMetricDesc, newMetricKind, newMetricError) // FIXME
+
+    const { data, error } = await supabase
+      .from("metrics")
+      .insert([{
+        user_id: userId,
+        name: newMetricName,
+        desc: newMetricDesc,
+        kind: newMetricKind,
+      }])
+      .select()
+
+    if (error) {
+      setNewMetricError(`Error occurred: ${error.message}. Code: ${error.code}.`)
+      console.log(error.message, error.code)
+    }
+
+    if (data) {
+      console.log(data)
+      setNewMetricName("")
+      setNewMetricDesc("")
+      setNewMetricKind("")
+      setNewMetricError("")
+      fetchData() // updated date from db
+    }
+  }
+
+  useEffect(() => {
     fetchData()
   }, [])
 
   return (
     <>
       <div className="flex-col md:flex">
+        {newMetricError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Failed to create metric</AlertTitle>
+            <AlertDescription>
+              {newMetricError}
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="flex items-center justify-between space-y-2">
           <H2>Dashboard</H2>
           <div className="flex items-center space-x-2">
@@ -62,25 +116,17 @@ function Home() {
                     Create new metric, click "Save" when you are done.
                   </SheetDescription>
                 </SheetHeader>
+                {/* form start */}
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                      Name
-                    </Label>
-                    <Input id="name" className="col-span-3" />
+                    <Input id="name" placeholder="Name" required className="col-span-4" value={newMetricName} onChange={(e) => setNewMetricName(e.target.value)} />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                      Description
-                    </Label>
-                    <Input id="name" className="col-span-3" />
+                    <Input id="desc" placeholder="Description" className="col-span-4" value={newMetricDesc} onChange={(e) => setNewMetricDesc(e.target.value)} />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="username" className="text-right">
-                      Metric type
-                    </Label>
-                    <Select>
-                      <SelectTrigger className="col-span-3">
+                    <Select name="kind" required value={newMetricKind} onValueChange={(v) => setNewMetricKind(v)}>
+                      <SelectTrigger className="col-span-4">
                         <SelectValue placeholder="Select metric type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -93,9 +139,10 @@ function Home() {
                     </Select>
                   </div>
                 </div>
+                {/* form end */}
                 <SheetFooter>
                   <SheetClose asChild>
-                    <Button type="submit">Save</Button>
+                    <Button type="submit" onClick={() => handleMetricSubmit()}>Save</Button>
                   </SheetClose>
                 </SheetFooter>
               </SheetContent>
@@ -105,13 +152,13 @@ function Home() {
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview">My</TabsTrigger>
-            <TabsTrigger value="analytics" disabled>
+            <TabsTrigger value="shared" disabled>
               Shared
             </TabsTrigger>
-            <TabsTrigger value="reports" disabled>
+            <TabsTrigger value="system" disabled>
               System
             </TabsTrigger>
-            <TabsTrigger value="notifications" disabled>
+            <TabsTrigger value="archive" disabled>
               Archive
             </TabsTrigger>
           </TabsList>

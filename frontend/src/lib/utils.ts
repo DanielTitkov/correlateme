@@ -12,3 +12,12 @@ export function formatDateToDDMMYYYY(date) {
 
   return `${day}.${month}.${year}`;
 }
+
+const nextDay = (currentDate: Date | null) => {
+  if (currentDate) {
+    const nextDay = new Date(currentDate);
+    nextDay.setDate(currentDate.getDate() + 1);
+    return nextDay;
+  }
+  return null;
+};

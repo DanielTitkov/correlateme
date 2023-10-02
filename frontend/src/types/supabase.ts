@@ -100,6 +100,3 @@ export interface Database {
     }
   }
 }
-
-export type Metric = Database['public']['Tables']['metrics']['Row'];
-export type Observation = Database['public']['Tables']['observations']['Row'];
